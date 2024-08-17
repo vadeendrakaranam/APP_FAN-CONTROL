@@ -1,0 +1,67 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+// Replace with your network credentials
+const char* ssid = "your_SSID";
+const char* password = "your_PASSWORD";
+
+// Create an instance of the server
+ESP8266WebServer server(80);
+
+// Relay pin connected to the DC motor
+const int relayPin = D1; // Change D1 to the appropriate GPIO pin
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize relay pin as an output
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, LOW); // Ensure the motor is off initially
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Define the routes
+  server.on("/", handleRoot);
+  server.on("/on", handleMotorOn);
+  server.on("/off", handleMotorOff);
+
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+}
+
+void loop() {
+  server.handleClient();
+}
+
+void handleRoot() {
+  String html = "<html><head><style>";
+  html += "body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; background-color: #f4f4f4; }";
+  html += "h1 { color: #333; }";
+  html += "button { background-color: #4CAF50; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 8px; }";
+  html += "button:hover { background-color: #45a049; }";
+  html += "</style></head><body>";
+  html += "<h1>FAN CONTROL</h1>";
+  html += "<a href=\"/on\"><button>OFF</button></a><br>";
+  html += "<a href=\"/off\"><button>ON</button></a>";
+  html += "</body></html>";
+  server.send(200, "text/html", html);
+}
+
+void handleMotorOn() {
+  digitalWrite(relayPin, HIGH); // Turn motor ON
+  server.sendHeader("Location", "/"); // Redirect to the root page
+  server.send(303); // HTTP status code for redirect
+}
+
+void handleMotorOff() {
+  digitalWrite(relayPin, LOW); // Turn motor OFF
+  server.sendHeader("Location", "/"); // Redirect to the root page
+  server.send(303); // HTTP status code for redirect
+}
